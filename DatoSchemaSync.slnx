@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DatoSchemaSync/DatoSchemaSync.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DatoSchemaSync.Tests/DatoSchemaSync.Tests.csproj" />
+  </Folder>
+</Solution>
