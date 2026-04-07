@@ -39,8 +39,7 @@ if (!string.IsNullOrEmpty(keyVaultUri))
     services.AddSingleton<IKeyVaultService, KeyVaultService>();
 }
 
-services.AddSingleton<ISnapshotService, BlobSnapshotService>();
-services.AddSingleton<IMappingService, BlobMappingService>();
+services.AddSingleton<IStorageService, BlobStorageService>();
 
 // Core services
 services.AddSingleton<ISchemaDiffService, SchemaDiffService>();
@@ -49,16 +48,8 @@ services.AddSingleton<SyncOrchestrator>();
 
 var serviceProvider = services.BuildServiceProvider();
 
-// Optionally load secrets from Key Vault and override configuration
-var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SyncConfiguration>>().Value;
-if (!string.IsNullOrEmpty(config.KeyVaultUri))
-{
-    var keyVault = serviceProvider.GetRequiredService<IKeyVaultService>();
-    config.SourceApiToken = await keyVault.GetSecretAsync(config.SourceApiTokenSecretName);
-    config.DestinationApiToken = await keyVault.GetSecretAsync(config.DestinationApiTokenSecretName);
-    if (string.IsNullOrEmpty(config.BlobConnectionString))
-        config.BlobConnectionString = await keyVault.GetSecretAsync(config.BlobConnectionStringSecretName);
-}
+// Load secrets from Key Vault if configured
+await serviceProvider.LoadSecretsFromKeyVaultAsync();
 
 // Run the orchestrator
 var orchestrator = serviceProvider.GetRequiredService<SyncOrchestrator>();
