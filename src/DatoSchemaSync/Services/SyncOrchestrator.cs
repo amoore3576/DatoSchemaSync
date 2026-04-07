@@ -7,8 +7,7 @@ namespace DatoSchemaSync.Services;
 public class SyncOrchestrator
 {
     private readonly IDatoApiClient _apiClient;
-    private readonly ISnapshotService _snapshotService;
-    private readonly IMappingService _mappingService;
+    private readonly IStorageService _storageService;
     private readonly ISchemaDiffService _diffService;
     private readonly ISchemaApplier _schemaApplier;
     private readonly ILogger<SyncOrchestrator> _logger;
@@ -16,16 +15,14 @@ public class SyncOrchestrator
 
     public SyncOrchestrator(
         IDatoApiClient apiClient,
-        ISnapshotService snapshotService,
-        IMappingService mappingService,
+        IStorageService storageService,
         ISchemaDiffService diffService,
         ISchemaApplier schemaApplier,
         ILogger<SyncOrchestrator> logger,
         IOptions<SyncConfiguration> config)
     {
         _apiClient = apiClient;
-        _snapshotService = snapshotService;
-        _mappingService = mappingService;
+        _storageService = storageService;
         _diffService = diffService;
         _schemaApplier = schemaApplier;
         _logger = logger;
@@ -40,7 +37,7 @@ public class SyncOrchestrator
         var currentSchema = await _apiClient.FetchSchemaAsync(_config.SourceApiToken, cancellationToken);
 
         // 2. Load previous snapshot
-        var previousSnapshot = await _snapshotService.LoadSnapshotAsync(cancellationToken);
+        var previousSnapshot = await _storageService.LoadSnapshotAsync(cancellationToken);
 
         // 3. If no previous snapshot, treat everything as new
         if (previousSnapshot == null)
@@ -59,19 +56,19 @@ public class SyncOrchestrator
         else
         {
             // 5. Load ID mapping
-            var mapping = await _mappingService.LoadMappingAsync(cancellationToken);
+            var mapping = await _storageService.LoadMappingAsync(cancellationToken);
 
             // 6. Apply changes
             await _schemaApplier.ApplyDiffAsync(diff, currentSchema, mapping, cancellationToken);
 
             // 7. Save updated mapping
             if (!_config.DryRun)
-                await _mappingService.SaveMappingAsync(mapping, cancellationToken);
+                await _storageService.SaveMappingAsync(mapping, cancellationToken);
         }
 
         // 8. Save current snapshot (even on dry run, so next run can diff properly)
         if (!_config.DryRun)
-            await _snapshotService.SaveSnapshotAsync(currentSchema, cancellationToken);
+            await _storageService.SaveSnapshotAsync(currentSchema, cancellationToken);
 
         _logger.LogInformation("DatoSchemaSync completed successfully.");
     }
